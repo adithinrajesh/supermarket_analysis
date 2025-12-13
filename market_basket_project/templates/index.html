@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Supermarket Basket Analysis</title>
+</head>
+<body>
+
+    <h1>Supermarket Basket Analysis</h1>
+
+    <form method="POST">
+        <label>Enter an item name:</label>
+        <input type="text" name="item" placeholder="e.g. whole milk" required>
+        <button type="submit">Find Co‑Purchased Items</button>
+    </form>
+
+    <hr>
+
+    <h2>Results</h2>
+
+    {% if items %}
+        <ul>
+            {% for item, count in items %}
+                <li>{{ item }} — {{ count }} times</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No results yet. Enter an item above.</p>
+    {% endif %}
+
+</body>
+</html>
