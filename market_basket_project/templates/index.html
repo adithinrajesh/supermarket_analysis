@@ -4,26 +4,37 @@
     <title>Supermarket Basket Recommendations</title>
     <style>
         * { box-sizing: border-box; }
+        body { font-family: Arial; margin: 40px; background: #f5f6fa; color: #2f3640; }
+        h1 { color: #192a56; margin-bottom: 20px; }
 
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
-            color: #333;
-            margin: 40px;
+        .main-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
         }
 
-        h1 { color: #2c3e50; margin-bottom: 20px; }
+        .left-panel {
+            width: 600px;
+        }
+
+        .right-panel {
+            flex: 1;
+        }
 
         .card {
-            background-color: #fff;
+            background: #fff;
             padding: 25px;
             border-radius: 8px;
-            width: 500px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             margin-bottom: 30px;
         }
 
-        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 6px; }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 6px;
+        }
 
         input[type="text"], select {
             width: 100%;
@@ -34,14 +45,21 @@
             font-size: 14px;
         }
 
-        .mode-selector { margin-top: 15px; }
-        .mode-selector label { font-weight: normal; margin-right: 15px; }
+        .mode-selector {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .mode-selector label {
+            font-weight: normal;
+        }
 
         button.submit-btn {
             margin-top: 20px;
             padding: 11px;
             width: 100%;
-            background-color: #3498db;
+            background: #44bd32;
             color: white;
             border: none;
             border-radius: 5px;
@@ -49,38 +67,33 @@
             cursor: pointer;
         }
 
-        button.submit-btn:hover { background-color: #2980b9; }
+        button.submit-btn:hover {
+            background: #4cd137;
+        }
 
-        .results { margin-top: 30px; }
+        ul {
+            margin-top: 12px;
+            padding-left: 20px;
+        }
 
-        ul { margin-top: 12px; padding-left: 20px; }
         li {
-            background-color: #f1f2f6;
+            background: #f1f2f6;
             padding: 8px;
             margin-bottom: 6px;
             border-radius: 4px;
-        }
-
-        .suggestion-btn {
-            display: block;
-            margin: 6px 0;
-            background: #ecf0f1;
-            border: 1px solid #b2bec3;
-            padding: 8px;
-            width: 100%;
-            text-align: left;
-            cursor: pointer;
-            border-radius: 4px;
+            line-height: 1.5;
             font-size: 14px;
         }
 
-        .suggestion-btn:hover { background: #bdc3c7; color: #2d3436; }
+        .graph-img {
+            width: 100%;
+            max-width: 700px;
+            margin-top: 15px;
+        }
 
-        .note { margin-top: 10px; color: #555; font-size: 13px; }
-
-        /* Bundle size container spacing */
-        #bundle-size-container {
-            margin-top: 10px;
+        .right-panel .card {
+            position: sticky;
+            top: 40px;
         }
     </style>
 </head>
@@ -88,100 +101,110 @@
 
 <h1>Supermarket Basket Recommendations</h1>
 
-<div class="card">
-    <form method="POST">
-        <label for="item">Enter item name</label>
-        <input type="text" id="item" name="item" placeholder="e.g. milk, bread, yogurt" required>
+<div class="main-container">
 
-        <label for="limit">Number of results</label>
-        <select id="limit" name="limit">
-            {% for i in range(1, 13) %}
-                <option value="{{ i }}" {% if i == limit %}selected{% endif %}>{{ i }}</option>
-            {% endfor %}
-        </select>
+    <!-- LEFT PANEL -->
+    <div class="left-panel">
 
-        <div class="mode-selector">
-            <label><input type="radio" name="mode" value="individual" {% if mode=='individual' %}checked{% endif %}> Individual Recommendations</label>
-            <label><input type="radio" name="mode" value="bundled" {% if mode=='bundled' %}checked{% endif %}> Bundled Recommendations</label>
+        <div class="card">
+            <form method="POST">
+
+                <!-- Mode Selector -->
+                <div class="mode-selector">
+                    <label>
+                        <input type="radio" name="mode" value="individual"
+                               {% if mode=='individual' %}checked{% endif %}>
+                        Individual Recommendation
+                    </label>
+                    <label>
+                        <input type="radio" name="mode" value="bundled"
+                               {% if mode=='bundled' %}checked{% endif %}>
+                        Bundled Recommendation
+                    </label>
+                </div>
+
+                <!-- Item Name -->
+                <div id="item-container">
+                    <label for="item">Enter item name</label>
+                    <input type="text" id="item" name="item"
+                           placeholder="e.g. milk, bread"
+                           value="{{ query_item }}">
+                </div>
+
+                <!-- Bundle Size -->
+                <div id="bundle-size-container">
+                    <label for="bundle_size">Bundle size</label>
+                    <select id="bundle_size" name="bundle_size">
+                        {% for i in range(2,6) %}
+                            <option value="{{ i }}" {% if i==bundle_size %}selected{% endif %}>
+                                {{ i }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Number of Related Items -->
+                <div id="limit-container">
+                    <label for="limit">Number of related items</label>
+                    <select id="limit" name="limit">
+                        {% for i in range(1,13) %}
+                            <option value="{{ i }}" {% if i==limit %}selected{% endif %}>
+                                {{ i }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit" class="submit-btn">Get Recommendations</button>
+            </form>
         </div>
 
-        <div id="bundle-size-container">
-            <label for="bundle_size">Bundle size</label>
-            <select id="bundle_size" name="bundle_size">
-                {% for i in range(2,5) %}
-                    <option value="{{ i }}" {% if i == bundle_size %}selected{% endif %}>{{ i }}</option>
+        {% if results %}
+        <div class="card">
+            <ul>
+                {% for sentence in results %}
+                    <li>{{ sentence }}</li>
                 {% endfor %}
-            </select>
+            </ul>
         </div>
-
-        <button type="submit" class="submit-btn">Get Recommendations</button>
-    </form>
-    <div class="note">
-        Suggestions and bundles are based on co-purchase patterns from our supermarket dataset.
-    </div>
-</div>
-
-{% if suggestions %}
-<div class="results card">
-    <h2>Did you mean?</h2>
-    <form method="POST">
-        <input type="hidden" name="limit" value="{{ limit }}">
-        <input type="hidden" name="mode" value="{{ mode }}">
-        <input type="hidden" name="bundle_size" value="{{ bundle_size }}">
-        {% for s in suggestions %}
-            <button type="submit" name="chosen_item" value="{{ s }}" class="suggestion-btn">{{ s }}</button>
-        {% endfor %}
-    </form>
-</div>
-{% endif %}
-
-{% if query_item %}
-<div class="results card">
-    <h2>
-        {% if mode == 'bundled' %}
-            Top Bundled Items
-        {% else %}
-            Related Items for "{{ query_item }}"
         {% endif %}
-    </h2>
 
-    {% if results %}
-        <ul>
-            {% if mode == 'bundled' %}
-                {% for item in results %}
-                    <li>{{ item[0]|join(', ')|replace_last(',', ' and')|capitalize }} were bought together {{ item[1] }} times.</li>
-                {% endfor %}
-            {% else %}
-                {% for item in results %}
-                    <li>{{ item|capitalize }}</li>
-                {% endfor %}
-            {% endif %}
-        </ul>
-    {% else %}
-        <p>No recommendations found.</p>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    {% if graph_file %}
+    <div class="right-panel">
+        <div class="card">
+            <h2>Item Co-Purchase Network</h2>
+            <img src="{{ graph_file }}" alt="Network Graph" class="graph-img">
+        </div>
+    </div>
     {% endif %}
+
 </div>
-{% endif %}
 
 <script>
-    const individualRadio = document.querySelector('input[name="mode"][value="individual"]');
-    const bundledRadio = document.querySelector('input[name="mode"][value="bundled"]');
-    const bundleContainer = document.getElementById('bundle-size-container');
+const individualRadio = document.querySelector('input[name="mode"][value="individual"]');
+const bundledRadio = document.querySelector('input[name="mode"][value="bundled"]');
+const bundleContainer = document.getElementById('bundle-size-container');
+const limitContainer = document.getElementById('limit-container');
+const itemContainer = document.getElementById('item-container');
 
-    function toggleBundleSize() {
-        if (bundledRadio.checked) {
-            bundleContainer.style.display = 'block';
-        } else {
-            bundleContainer.style.display = 'none';
-        }
+function toggleModeFields() {
+    if (individualRadio.checked) {
+        itemContainer.style.display = 'block';
+        limitContainer.style.display = 'block';
+        bundleContainer.style.display = 'none';
+    } else {
+        itemContainer.style.display = 'block';
+        bundleContainer.style.display = 'block';
+        limitContainer.style.display = 'block';
     }
+}
 
-    // Initial check on page load
-    toggleBundleSize();
-
-    // Add event listeners
-    individualRadio.addEventListener('change', toggleBundleSize);
-    bundledRadio.addEventListener('change', toggleBundleSize);
+toggleModeFields();
+individualRadio.addEventListener('change', toggleModeFields);
+bundledRadio.addEventListener('change', toggleModeFields);
 </script>
 
 </body>

@@ -2,75 +2,54 @@ from flask import Flask, render_template, request
 from market_basket.market_basket_graph import (
     load_transactions,
     build_graph,
-    bfs_related_items,
-    find_matching_items,
-    top_product_bundles
+    most_common_with,
+    top_product_bundles,
+    visualize_item_network_subgraph,
+    format_individual_results,
+    format_bundled_results
 )
 
 app = Flask(__name__)
 
-@app.template_filter('replace_last')
-def replace_last(value, old, new):
-    """
-    Replace last occurrence of old with new in a string
-    """
-    li = value.rsplit(old, 1)
-    return new.join(li)
-
-
-# Load data ONCE
-transactions = load_transactions("data/supermarket_dataset.csv")
+# Load data and build adjacency list once at startup
+transactions = load_transactions('data/supermarket_dataset.csv')
 adjacency_list = build_graph(transactions)
 
-
-@app.route("/", methods=["GET", "POST"])
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    query_item = None
-    suggestions = []
+    mode = request.form.get('mode', 'individual')
+    query_item = request.form.get('item', '').strip()
+    limit = int(request.form.get('limit', 6))
+    bundle_size = int(request.form.get('bundle_size', 2))
     results = []
-    mode = "individual"
-    limit = 5
-    bundle_size = 2
+    graph_file = None
 
-    if request.method == "POST":
-        user_input = request.form.get("item", "").strip()
-        mode = request.form.get("mode", "individual")
-        limit = int(request.form.get("limit", 5))
-        bundle_size = int(request.form.get("bundle_size", 2))
-        chosen_item = request.form.get("chosen_item")
+    if mode == 'individual' and query_item:
+        top_items = most_common_with(query_item, adjacency_list, top_n=limit)
+        results = format_individual_results(top_items)
+        # Nodes for graph include main item + related items
+        nodes = [query_item] + [item for item, _ in top_items]
+        graph_file = visualize_item_network_subgraph(adjacency_list, nodes)
 
-        # User selected a suggestion
-        if chosen_item:
-            query_item = chosen_item
-            if mode == "bundled":
-                results = top_product_bundles(transactions, bundle_size=bundle_size, top_n=limit)
-            else:
-                related_items = bfs_related_items(query_item, adjacency_list, max_depth=2)
-                results = list(related_items)[:limit]
-
-        # User typed new input
-        elif user_input:
-            matches = find_matching_items(user_input, adjacency_list)
-            if len(matches) == 1:
-                query_item = matches[0]
-                if mode == "bundled":
-                    results = top_product_bundles(transactions, bundle_size=bundle_size, top_n=limit)
-                else:
-                    related_items = bfs_related_items(query_item, adjacency_list, max_depth=2)
-                    results = list(related_items)[:limit]
-            elif len(matches) > 1:
-                suggestions = matches
+    elif mode == 'bundled' and transactions:
+        top_bundles = top_product_bundles(transactions, top_n=limit, bundle_size=bundle_size)
+        results = format_bundled_results(top_bundles)
+        # Nodes for graph include all items in top bundles
+        nodes = set()
+        for bundle, _ in top_bundles:
+            nodes.update(bundle)
+        if nodes:
+            graph_file = visualize_item_network_subgraph(adjacency_list, list(nodes))
 
     return render_template(
-        "index.html",
-        query_item=query_item,
-        suggestions=suggestions,
-        results=results,
+        'index.html',
         mode=mode,
+        query_item=query_item,
         limit=limit,
-        bundle_size=bundle_size
+        bundle_size=bundle_size,
+        results=results,
+        graph_file=graph_file
     )
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)

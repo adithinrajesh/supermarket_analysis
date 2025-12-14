@@ -1,136 +1,173 @@
 from collections import defaultdict, deque
-from itertools import combinations
 import pandas as pd
+import networkx as nx
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend for Flask
+import matplotlib.pyplot as plt
+from itertools import combinations
 
+# ---------------------------
+# Data Loading
+# ---------------------------
 def load_transactions(csv_path):
     """
-    Load transactions from CSV and return a list of lists.
-    Each inner list is the items bought by one customer in one visit.
+    Load supermarket dataset and group items by member and date.
+    Returns a list of transactions (list of items).
     """
     df = pd.read_csv(csv_path)
     transactions = df.groupby(['Member_number', 'Date'])['itemDescription'].apply(list)
     return transactions.tolist()
 
-
+# ---------------------------
+# Graph Construction
+# ---------------------------
 def build_graph(transactions):
     """
-    Build co-purchase graph using adjacency list.
-    Each transaction is a list of items.
+    Build adjacency list for co-purchased items.
+    adjacency_list[item1][item2] = number of times item1 and item2 were bought together
     """
     adjacency_list = defaultdict(lambda: defaultdict(int))
-
     for transaction in transactions:
         for i in range(len(transaction)):
             for j in range(i + 1, len(transaction)):
                 item1, item2 = transaction[i], transaction[j]
                 adjacency_list[item1][item2] += 1
                 adjacency_list[item2][item1] += 1
-
     return adjacency_list
 
+# ---------------------------
+# Individual Recommendations
+# ---------------------------
+def most_common_with(item, adjacency_list, top_n=6):
+    """
+    Return top N items most frequently bought with the given item.
+    """
+    if item not in adjacency_list:
+        return []
+    return sorted(adjacency_list[item].items(), key=lambda x: x[1], reverse=True)[:top_n]
 
 def bfs_related_items(start_item, adjacency_list, max_depth=2):
     """
-    BFS to find related items up to max_depth away.
+    Optional: BFS traversal to get related items up to a certain depth.
     """
     visited = set([start_item])
     queue = deque([(start_item, 0)])
     related_items = set()
-
     while queue:
         current, depth = queue.popleft()
         if depth >= max_depth:
             continue
-        for neighbour in adjacency_list[current]:
-            if neighbour not in visited:
-                visited.add(neighbour)
-                related_items.add(neighbour)
-                queue.append((neighbour, depth + 1))
-
+        for neighbor in adjacency_list[current]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                related_items.add(neighbor)
+                queue.append((neighbor, depth + 1))
     return related_items
 
-
-def find_matching_items(user_input, adjacency_list):
+# ---------------------------
+# Bundled Recommendations
+# ---------------------------
+def top_product_bundles(transactions, top_n=6, bundle_size=2):
     """
-    Return list of items that contain the user_input substring (case-insensitive)
-    """
-    user_input = user_input.lower()
-    return [item for item in adjacency_list if user_input in item.lower()]
-
-
-def top_product_bundles(transactions, bundle_size=2, top_n=6):
-    """
-    Compute top bundles of given size from transactions.
-    Returns list of tuples: (bundle_tuple, frequency)
+    Return the top N bundles of items frequently bought together.
+    Each bundle is a tuple (items_tuple, count)
     """
     bundle_counts = defaultdict(int)
     for transaction in transactions:
-        for combo in combinations(sorted(set(transaction)), bundle_size):
-            bundle_counts[combo] += 1
-
+        unique_items = sorted(set(transaction))
+        if len(unique_items) >= bundle_size:
+            for combo in combinations(unique_items, bundle_size):
+                bundle_counts[combo] += 1
     sorted_bundles = sorted(bundle_counts.items(), key=lambda x: x[1], reverse=True)
     return sorted_bundles[:top_n]
 
-def items_frequently_bought_with_all(query_items, adjacency_list, top_n=6):
+# ---------------------------
+# Graph Visualization
+# ---------------------------
+def visualize_item_network_subgraph(adjacency_list, nodes, filename='static/images/graph.png'):
     """
-    Return items most frequently bought with all query_items
+    Generate and save a circular network graph of co-purchased items.
+    Includes self-loops styled as arcs, with all nodes light blue.
     """
-    if not query_items:
-        return []
+    import networkx as nx
+    import matplotlib.pyplot as plt
 
-    # Start with first item's neighbors
-    common_counts = adjacency_list.get(query_items[0], {}).copy()
-
-    # Intersect with all other query_items
-    for item in query_items[1:]:
-        neighbors = adjacency_list.get(item, {})
-        common_counts = {k: min(common_counts.get(k, 0), neighbors.get(k, 0))
-                         for k in common_counts if k in neighbors}
-
-    # Remove query_items themselves
-    for q in query_items:
-        common_counts.pop(q, None)
-
-    # Sort top N
-    sorted_items = sorted(common_counts.items(), key=lambda x: x[1], reverse=True)
-    return sorted_items[:top_n]
-
-import networkx as nx
-import matplotlib.pyplot as plt
-
-def visualize_item_network(adjacency_list, max_items=20, filename='graph.png'):
-    """
-    Visualize item co-purchase network
-    max_items: limit nodes to top N items by degree for clarity
-    """
     # Build graph
     G = nx.Graph()
-    for item, neighbors in adjacency_list.items():
-        for neighbor, weight in neighbors.items():
-            if item < neighbor:  # avoid duplicate edges
+    for item in nodes:
+        for neighbor, weight in adjacency_list[item].items():
+            if neighbor in nodes and weight >= 2:
                 G.add_edge(item, neighbor, weight=weight)
 
-    # Limit nodes if too many
-    if len(G.nodes) > max_items:
-        # Take top nodes by degree
-        degrees = dict(G.degree(weight='weight'))
-        top_nodes = sorted(degrees, key=degrees.get, reverse=True)[:max_items]
-        G = G.subgraph(top_nodes).copy()
+    if len(G.nodes) == 0:
+        return None
 
-    # Draw
-    pos = nx.spring_layout(G, seed=42)
-    weights = [G[u][v]['weight'] for u,v in G.edges()]
-    plt.figure(figsize=(12, 8))
-    nx.draw(G, pos, with_labels=True, node_color='skyblue', node_size=1000,
-            edge_color='orange', width=[w/2 for w in weights], font_size=10)
-    plt.title('Item Co-Purchase Network')
+    # Circular layout for symmetry
+    pos = nx.circular_layout(G)
+
+    # Node sizes by degree, all light blue
+    node_sizes = [300 + 150 * G.degree(n) for n in G.nodes()]
+    nx.draw_networkx_nodes(G, pos, node_size=node_sizes, node_color='lightblue')
+
+    # Separate normal edges and self-loops
+    normal_edges = [(u, v) for u, v in G.edges() if u != v]
+    loop_edges = [(u, v) for u, v in G.edges() if u == v]
+
+    # Edge widths scaled gently
+    weights = [G[u][v]['weight'] for u, v in normal_edges]
+    max_w = max(weights) if weights else 1
+    edge_widths = [0.5 + (w / max_w) * 2.5 for w in weights]
+
+    # Draw normal edges
+    nx.draw_networkx_edges(G, pos, edgelist=normal_edges,
+                           width=edge_widths, edge_color='gray', alpha=0.6)
+
+    # Draw self-loops as arcs
+    if loop_edges:
+        nx.draw_networkx_edges(G, pos, edgelist=loop_edges,
+                               connectionstyle="arc3,rad=0.3",
+                               edge_color='gray', alpha=0.6, width=2)
+
+    # Labels: show item name and self-loop count if present
+    labels = {}
+    for n in G.nodes():
+        if (n, n) in G.edges():
+            labels[n] = f"{n}\n({G[n][n]['weight']})"
+        else:
+            labels[n] = n
+
+    nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, font_color='black')
+
+    # Optional: edge labels for weights (excluding self-loops)
+    edge_labels = {(u, v): d['weight'] for u, v, d in G.edges(data=True) if u != v}
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
+
+    plt.title('Item Association Graph', fontsize=16)
+    plt.axis('off')
     plt.tight_layout()
-    plt.savefig(filename)
+    plt.savefig(filename, dpi=300)
     plt.close()
     return filename
+# ---------------------------
+# Formatting Helpers
+# ---------------------------
+def format_individual_results(results):
+    """
+    Format individual recommendation results for display.
+    """
+    return [f"{item.capitalize()} — {count} times" for item, count in results]
 
-def check_copurchase(item1, item2, adjacency_list, threshold=5):
+def format_bundled_results(results):
     """
-    Return True if item1 and item2 are co-purchased >= threshold
+    Format bundled recommendation results for display.
+    Handles 2+ item bundles with proper grammar.
     """
-    return adjacency_list[item1].get(item2, 0) >= threshold
+    formatted = []
+    for bundle, count in results:
+        if len(bundle) == 2:
+            sentence = f"{bundle[0].capitalize()} and {bundle[1].capitalize()} were bought together {count} times."
+        else:
+            all_but_last = ", ".join([x.capitalize() for x in bundle[:-1]])
+            sentence = f"{all_but_last} and {bundle[-1].capitalize()} were bought together {count} times."
+        formatted.append(sentence)
+    return formatted
