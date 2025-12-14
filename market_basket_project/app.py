@@ -12,6 +12,12 @@ from market_basket.market_basket_graph import (
     format_bundled_results
 )
 
+from logging_setup import setup_logging
+
+# Initialize logger
+logger = setup_logging()
+
+
 # Create Flask application instance
 app = Flask(__name__)
 
@@ -52,6 +58,8 @@ def index():
     # ---------------------------------
     # Individual Recommendation Mode
     # ---------------------------------
+    logger.info(f"Request received. Mode: {mode}, Item: '{query_item}', Limit: {limit}, Bundle size: {bundle_size}")
+
     if mode == 'individual' and query_item:
         # Find items most frequently bought with the selected item
         top_items = most_common_with(query_item, adjacency_list, top_n=limit)
