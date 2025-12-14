@@ -1,10 +1,11 @@
 from collections import defaultdict, deque
 import pandas as pd
 import networkx as nx
-import matplotlib
-matplotlib.use('Agg')  # Non-interactive backend for Flask
 import matplotlib.pyplot as plt
 from itertools import combinations
+
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend for Flask
 
 # ---------------------------
 # Data Loading
@@ -148,6 +149,7 @@ def visualize_item_network_subgraph(adjacency_list, nodes, filename='static/imag
     plt.savefig(filename, dpi=300)
     plt.close()
     return filename
+
 # ---------------------------
 # Formatting Helpers
 # ---------------------------
