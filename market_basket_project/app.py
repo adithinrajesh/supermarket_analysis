@@ -17,7 +17,7 @@ adjacency_list = build_graph(transactions)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    mode = request.form.get('mode', 'individual')
+    mode = request.form.get('mode')
     query_item = request.form.get('item', '').strip()
     limit = int(request.form.get('limit', 6))
     bundle_size = int(request.form.get('bundle_size', 2))

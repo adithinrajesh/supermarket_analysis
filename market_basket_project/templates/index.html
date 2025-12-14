@@ -127,9 +127,28 @@
                 <div id="item-container">
                     <label for="item">Enter item name</label>
                     <input type="text" id="item" name="item"
-                           placeholder="e.g. milk, bread"
+                           placeholder="e.g. whole milk, sausage"
                            value="{{ query_item }}">
                 </div>
+                
+                {% if suggestions %}
+                <div style="margin-top:12px; padding:12px; background:#fffbe6; border:1px solid #fbc531; border-radius:6px;">
+                    <strong>Did you mean:</strong>
+                    <ul style="margin-top:8px;">
+                        {% for option in suggestions %}
+                        <li style="list-style:none; padding:4px 0;">
+                            <button type="submit"
+                                    name="item"
+                                    value="{{ option }}"
+                                    style="background:none;border:none;color:#273c75;cursor:pointer;font-size:14px;padding:0;">
+                                {{ option }}
+                            </button>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
 
                 <!-- Bundle Size -->
                 <div id="bundle-size-container">
