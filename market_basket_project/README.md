@@ -15,22 +15,6 @@ recommendations and bundled product analysis.
 
 ---
 
-## Project Structure
-├── app.py
-├── market_basket/
-│ └── market_basket_graph.py
-├── data/
-│ └── supermarket_dataset.csv
-├── templates/
-│ └── index.html
-├── static/
-│ └── images/
-│ └── graph.png
-├── requirements.txt
-└── README.md
-
----
-
 ## Data Structures and Algorithms
 
 ### Data Structure
@@ -80,3 +64,4 @@ Columns:
 Member_number
 Date
 itemDescription
+
