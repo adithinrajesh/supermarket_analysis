@@ -49,7 +49,7 @@ recommendations and bundled product analysis.
 1. Clone the repository:
    ```bash
    git clone https://github.com/your-username/supermarket-basket-recommender.git
-   cd supermarket-basket-recommender
+   cd market_basket_product
 2. install dependencies
    pip install -r requirements.txt
 3. run the application
@@ -64,4 +64,5 @@ Columns:
 Member_number
 Date
 itemDescription
+
 
